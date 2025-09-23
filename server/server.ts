@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
 import { app } from './app';
+import { PORT } from './server-constants';
+import { validateEnv } from './helpers/env.helper';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 8080;
+const env = validateEnv();
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);

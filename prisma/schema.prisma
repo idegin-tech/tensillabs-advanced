@@ -13,10 +13,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AuthProvider {
+  GOOGLE
+  MICROSOFT
+  EMAIL
+}
+
+enum SecretType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  emailVerified DateTime?
+  name          String?
+  avatar        String?
+  authProvider  AuthProvider
+  providerId    String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  workspaces    Workspace[]
+  userSecrets   UserSecret[]
+
+  @@map("users")
+}
+
+model UserSecret {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      SecretType
+  secret    String
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, type])
+  @@map("user_secrets")
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  createdBy String
+  creator   User     @relation(fields: [createdBy], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   pages     Page[]

@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import { authRoutes } from './apis/auth/auth.routes';
 
 const router = Router();
+const apiRouter = Router();
 
 router.get('/', (req, res) => {
     res.json({
@@ -10,7 +12,7 @@ router.get('/', (req, res) => {
     });
 });
 
-router.use('/api/v1', (req, res) => {
+apiRouter.get('/', (req, res) => {
     res.json({
         message: 'API v1 endpoint',
         status: 'success',
@@ -18,5 +20,9 @@ router.use('/api/v1', (req, res) => {
         version: '1.0.0'
     });
 });
+
+apiRouter.use('/auth', authRoutes);
+
+router.use('/api/v1', apiRouter);
 
 export { router };
