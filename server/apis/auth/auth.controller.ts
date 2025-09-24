@@ -3,7 +3,6 @@ import passport from 'passport';
 import { AuthService } from './auth.service';
 import { ValidationRequest } from '../../middleware/validation.middleware';
 import { AuthenticatedRequest } from './auth.middleware';
-import { AuthProvider } from '@prisma/client';
 import type { 
   RegisterDto, 
   LoginDto, 
@@ -12,7 +11,7 @@ import type {
   ResetPasswordDto,
   RefreshTokenDto
 } from './auth.dto';
-import { IS_PRODUCTION } from '@/server/server-constants';
+import { IS_PRODUCTION } from '../../server-constants';
 
 const authService = new AuthService();
 
@@ -27,8 +26,9 @@ export class AuthController {
         user: {
           id: result.user.id,
           email: result.user.email,
-          name: result.user.name,
-          authProvider: result.user.authProvider,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+          middleName: result.user.middleName,
         },
       });
     } catch (error: any) {
@@ -62,8 +62,9 @@ export class AuthController {
         user: {
           id: result.user.id,
           email: result.user.email,
-          name: result.user.name,
-          authProvider: result.user.authProvider,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+          middleName: result.user.middleName,
           emailVerified: result.user.emailVerified,
         },
         accessToken: result.accessToken,
@@ -198,61 +199,7 @@ export class AuthController {
     }
   }
 
-  googleAuth = passport.authenticate('google', {
-    scope: ['profile', 'email'],
-  });
 
-  async googleCallback(req: any, res: Response, next: NextFunction) {
-    try {
-      const result = await authService.handleSocialLogin(req.user, AuthProvider.GOOGLE);
-      
-      res.cookie('accessToken', result.accessToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-      });
-
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-
-      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?success=true`);
-    } catch (error) {
-      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?error=auth_failed`);
-    }
-  }
-
-  microsoftAuth = passport.authenticate('microsoft', {
-    scope: ['user.read'],
-  });
-
-  async microsoftCallback(req: any, res: Response, next: NextFunction) {
-    try {
-      const result = await authService.handleSocialLogin(req.user, AuthProvider.MICROSOFT);
-      
-      res.cookie('accessToken', result.accessToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-      });
-
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-
-      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?success=true`);
-    } catch (error) {
-      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?error=auth_failed`);
-    }
-  }
 
   async resendVerification(req: ValidationRequest, res: Response, next: NextFunction) {
     try {

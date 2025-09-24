@@ -1,4 +1,4 @@
-import { PrismaClient, AuthProvider } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../helpers/auth.helper';
 
 export async function seedDevUsers(prisma: PrismaClient) {
@@ -20,9 +20,9 @@ export async function seedDevUsers(prisma: PrismaClient) {
   const devUser = await prisma.user.create({
     data: {
       email: 'dev@tensillabs.com',
-      name: 'Dev User',
+      firstName: 'Dev',
+      lastName: 'User',
       emailVerified: new Date(),
-      authProvider: AuthProvider.EMAIL,
       userSecret: {
         create: {
           hashedPassword,

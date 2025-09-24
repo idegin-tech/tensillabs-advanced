@@ -8,7 +8,6 @@ import {
     comparePassword,
     verifyRefreshToken
 } from '../../helpers/auth.helper';
-import { AuthProvider } from '@prisma/client';
 import type {
     RegisterDto,
     LoginDto,
@@ -34,8 +33,9 @@ export class AuthService {
         const user = await prisma.user.create({
             data: {
                 email: data.email,
-                name: data.name,
-                authProvider: AuthProvider.EMAIL,
+                firstName: data.firstName,
+                lastName: data.lastName,
+                middleName: data.middleName,
                 userSecret: {
                     create: {
                         hashedPassword,
@@ -47,9 +47,10 @@ export class AuthService {
             select: {
                 id: true,
                 email: true,
-                name: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
                 emailVerified: true,
-                authProvider: true,
                 createdAt: true
             }
         });
@@ -103,9 +104,10 @@ export class AuthService {
             select: {
                 id: true,
                 email: true,
-                name: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
                 emailVerified: true,
-                authProvider: true,
                 createdAt: true
             }
         });
@@ -131,10 +133,6 @@ export class AuthService {
             throw new Error('Invalid email or password');
         }
 
-        if (user.authProvider !== AuthProvider.EMAIL) {
-            throw new Error(`Please use ${user.authProvider.toLowerCase()} login for this account`);
-        }
-
         if (!user.emailVerified) {
             throw new Error('Please verify your email before logging in');
         }
@@ -157,9 +155,10 @@ export class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
-                name: user.name,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                middleName: user.middleName,
                 emailVerified: user.emailVerified,
-                authProvider: user.authProvider,
                 createdAt: user.createdAt
             }, 
             accessToken, 
@@ -177,9 +176,7 @@ export class AuthService {
             return { message: 'If this email exists, we will send a password reset code.' };
         }
 
-        if (user.authProvider !== AuthProvider.EMAIL) {
-            throw new Error('Password reset not available for social login accounts');
-        }
+
 
         const passwordResetOtp = generateOTP();
         const passwordResetExp = generateOTPExpiration();
@@ -251,9 +248,10 @@ export class AuthService {
                 select: {
                     id: true,
                     email: true,
-                    name: true,
+                    firstName: true,
+                    lastName: true,
+                    middleName: true,
                     emailVerified: true,
-                    authProvider: true,
                     createdAt: true
                 }
             });
@@ -276,52 +274,7 @@ export class AuthService {
         }
     }
 
-    async handleSocialLogin(profile: any, provider: AuthProvider) {
-        const userSelect = {
-            id: true,
-            email: true,
-            name: true,
-            emailVerified: true,
-            authProvider: true,
-            avatar: true,
-            providerId: true,
-            createdAt: true,
-            updatedAt: true
-        };
 
-        let user = await prisma.user.findUnique({
-            where: { email: profile.emails[0].value },
-            select: userSelect
-        });
-
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    email: profile.emails[0].value,
-                    name: profile.displayName,
-                    emailVerified: new Date(),
-                    authProvider: provider,
-                    providerId: profile.id,
-                    avatar: profile.photos?.[0]?.value || null,
-                },
-                select: userSelect
-            });
-            
-            // TODO: Send welcome email to new social login user
-        } else if (user.authProvider !== provider) {
-            throw new Error(`This email is already registered with ${user.authProvider.toLowerCase()} login`);
-        }
-
-        const accessToken = generateAccessToken(user.id);
-        const refreshToken = generateRefreshToken(user.id);
-        
-        return { 
-            message: 'Social login successful',
-            user, 
-            accessToken, 
-            refreshToken 
-        };
-    }
 
     async resendVerificationCode(email: string) {
         const user = await prisma.user.findUnique({

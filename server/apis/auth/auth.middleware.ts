@@ -40,9 +40,9 @@ export const authMiddleware = async (
         select: {
           id: true,
           email: true,
-          name: true,
-          avatar: true,
-          authProvider: true,
+          firstName: true,
+          lastName: true,
+          middleName: true,
           emailVerified: true,
           createdAt: true,
           updatedAt: true,
@@ -103,9 +103,9 @@ export const optionalAuthMiddleware = async (
         select: {
           id: true,
           email: true,
-          name: true,
-          avatar: true,
-          authProvider: true,
+          firstName: true,
+          lastName: true,
+          middleName: true,
           emailVerified: true,
           createdAt: true,
           updatedAt: true,
@@ -117,6 +117,7 @@ export const optionalAuthMiddleware = async (
         req.userId = user.id;
       }
     } catch (jwtError) {
+      // Ignore JWT errors in optional middleware
     }
 
     next();

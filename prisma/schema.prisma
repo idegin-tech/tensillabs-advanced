@@ -9,23 +9,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum AuthProvider {
-  GOOGLE
-  MICROSOFT
-  EMAIL
-}
-
 model User {
   id            String       @id @default(cuid())
   email         String       @unique
   emailVerified DateTime?
-  name          String?
-  avatar        String?
-  authProvider  AuthProvider
-  providerId    String?
+  firstName     String?
+  lastName      String?
+  middleName    String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   workspaces    Workspace[]
+  spaces        Space[]
   userSecret    UserSecret?
 
   @@map("users")
@@ -54,20 +48,36 @@ model Workspace {
   creator   User     @relation(fields: [createdBy], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  pages     Page[]
+  spaces    Space[]
 
   @@map("workspaces")
 }
 
-model Page {
+model Space {
   id          String    @id @default(cuid())
   name        String
   slug        String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  pages       Page[]
 
   @@unique([workspaceId, slug])
+  @@map("spaces")
+}
+
+model Page {
+  id        String  @id @default(cuid())
+  name      String
+  slug      String
+  spaceId   String
+  space     Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([spaceId, slug])
   @@map("pages")
 }

@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { authRoutes } from './apis/auth/auth.routes';
+import { workspacesRoutes } from './apis/workspaces/workspaces.routes';
+import { usersRoutes } from './apis/users/users.routes';
+import { spacesRoutes } from './apis/spaces/spaces.routes';
 
 const router = Router();
 const apiRouter = Router();
@@ -22,6 +25,9 @@ apiRouter.get('/', (req, res) => {
 });
 
 apiRouter.use('/auth', authRoutes);
+apiRouter.use('/workspaces', workspacesRoutes);
+apiRouter.use('/users', usersRoutes);
+apiRouter.use('/spaces', spacesRoutes);
 
 router.use('/api/v1', apiRouter);
 

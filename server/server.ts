@@ -5,7 +5,7 @@ import { validateEnv } from './helpers/env.helper';
 
 dotenv.config();
 
-const env = validateEnv();
+validateEnv();
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
