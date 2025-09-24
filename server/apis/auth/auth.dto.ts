@@ -11,6 +11,7 @@ export const registerDto = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   middleName: z.string().optional(),
+  workspaceName: z.string().min(1, 'Workspace name is required'),
 });
 
 export const verifyEmailDto = z.object({
@@ -36,8 +37,18 @@ export const resendVerificationDto = z.object({
   email: z.string().email('Invalid email format'),
 });
 
+export const checkEmailDto = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+export const checkWorkspaceDto = z.object({
+  workspaceName: z.string().min(1, 'Workspace name is required'),
+});
+
 export type LoginDto = z.infer<typeof loginDto>;
 export type RegisterDto = z.infer<typeof registerDto>;
+export type CheckEmailDto = z.infer<typeof checkEmailDto>;
+export type CheckWorkspaceDto = z.infer<typeof checkWorkspaceDto>;
 export type VerifyEmailDto = z.infer<typeof verifyEmailDto>;
 export type ForgotPasswordDto = z.infer<typeof forgotPasswordDto>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordDto>;

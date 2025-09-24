@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import cookieParser from 'cookie-parser';
 import { passport } from './config/passport.config';
 import { router } from './routes';
@@ -20,13 +21,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+const PgSession = connectPgSimple(session);
+
 app.use(session({
+    store: new PgSession({
+        conString: env.DATABASE_URL,
+        tableName: 'sessions',
+        createTableIfMissing: true,
+    }),
     secret: env.AUTH_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000,
+        httpOnly: true,
+        sameSite: 'strict',
     },
 }));
 

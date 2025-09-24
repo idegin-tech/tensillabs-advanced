@@ -1,20 +1,24 @@
 export interface SeedConfig {
   environment: 'development' | 'production' | 'test';
   runSeeds: string[];
+  globalSeeds: string[];
 }
 
 export const seedConfig: Record<string, SeedConfig> = {
   development: {
     environment: 'development',
-    runSeeds: ['dev-users']
+    runSeeds: ['dev-users'],
+    globalSeeds: ['global-settings']
   },
   production: {
     environment: 'production',
-    runSeeds: [] // No seeds in production
+    runSeeds: [],
+    globalSeeds: ['global-settings']
   },
   test: {
     environment: 'test',
-    runSeeds: ['dev-users']
+    runSeeds: ['dev-users'],
+    globalSeeds: ['global-settings']
   }
 };
 

@@ -7,6 +7,7 @@ const envSchema = z.object({
   AUTH_SECRET: z.string(),
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:8080'),
   NEXT_PUBLIC_URL: z.string().default('http://localhost:3000'),
+  SELF_HOSTED: z.string().default('false').transform((val) => val === 'true'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

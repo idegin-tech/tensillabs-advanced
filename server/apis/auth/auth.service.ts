@@ -1,4 +1,6 @@
 import { prisma } from '../../helpers/prisma.helper';
+import { env } from '../../helpers/env.helper';
+import { generateWorkspaceSlug } from '../../helpers/workspace.helper';
 import {
     hashPassword,
     generateAccessToken,
@@ -13,7 +15,9 @@ import type {
     LoginDto,
     VerifyEmailDto,
     ForgotPasswordDto,
-    ResetPasswordDto
+    ResetPasswordDto,
+    CheckEmailDto,
+    CheckWorkspaceDto
 } from './auth.dto';
 
 export class AuthService {
@@ -24,6 +28,26 @@ export class AuthService {
 
         if (existingUser) {
             throw new Error('User with this email already exists');
+        }
+
+        if (env.SELF_HOSTED) {
+            const userCount = await prisma.user.count();
+            if (userCount > 0) {
+                return {
+                    message: 'Admin user already exists for this self-hosted instance',
+                    status: 'ADMIN_EXISTS'
+                };
+            }
+        }
+
+        const workspaceSlug = generateWorkspaceSlug(data.workspaceName);
+        
+        const existingWorkspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        });
+
+        if (existingWorkspace) {
+            throw new Error('Workspace name is already taken');
         }
 
         const hashedPassword = await hashPassword(data.password);
@@ -42,6 +66,12 @@ export class AuthService {
                         emailVerificationOtp,
                         emailVerificationExp,
                     }
+                },
+                workspaces: {
+                    create: {
+                        name: data.workspaceName,
+                        slug: workspaceSlug,
+                    }
                 }
             },
             select: {
@@ -51,7 +81,14 @@ export class AuthService {
                 lastName: true,
                 middleName: true,
                 emailVerified: true,
-                createdAt: true
+                createdAt: true,
+                workspaces: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    }
+                }
             }
         });
 
@@ -112,14 +149,9 @@ export class AuthService {
             }
         });
 
-        const accessToken = generateAccessToken(user.id);
-        const refreshToken = generateRefreshToken(user.id);
-
         return { 
             message: 'Email verified successfully',
-            user: updatedUser, 
-            accessToken, 
-            refreshToken 
+            user: updatedUser
         };
     }
 
@@ -147,9 +179,6 @@ export class AuthService {
             throw new Error('Invalid email or password');
         }
 
-        const accessToken = generateAccessToken(user.id);
-        const refreshToken = generateRefreshToken(user.id);
-
         return { 
             message: 'Login successful',
             user: {
@@ -160,9 +189,7 @@ export class AuthService {
                 middleName: user.middleName,
                 emailVerified: user.emailVerified,
                 createdAt: user.createdAt
-            }, 
-            accessToken, 
-            refreshToken 
+            }
         };
     }
 
@@ -304,5 +331,30 @@ export class AuthService {
         // TODO: Send new email verification OTP to user.email
 
         return { message: 'Verification code sent to your email.' };
+    }
+
+    async checkEmailAvailability(data: CheckEmailDto) {
+        const existingUser = await prisma.user.findUnique({
+            where: { email: data.email },
+        });
+
+        return {
+            available: !existingUser,
+            message: existingUser ? 'Email is already taken' : 'Email is available'
+        };
+    }
+
+    async checkWorkspaceAvailability(data: CheckWorkspaceDto) {
+        const workspaceSlug = generateWorkspaceSlug(data.workspaceName);
+        
+        const existingWorkspace = await prisma.workspace.findUnique({
+            where: { slug: workspaceSlug },
+        });
+
+        return {
+            available: !existingWorkspace,
+            slug: workspaceSlug,
+            message: existingWorkspace ? 'Workspace name is already taken' : 'Workspace name is available'
+        };
     }
 }

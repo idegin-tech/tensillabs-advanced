@@ -9,7 +9,9 @@ import type {
   VerifyEmailDto, 
   ForgotPasswordDto, 
   ResetPasswordDto,
-  RefreshTokenDto
+  RefreshTokenDto,
+  CheckEmailDto,
+  CheckWorkspaceDto
 } from './auth.dto';
 import { IS_PRODUCTION } from '../../server-constants';
 
@@ -21,6 +23,19 @@ export class AuthController {
       const data: RegisterDto = req.validatedBody;
       const result = await authService.register(data);
       
+      if (result.status === 'ADMIN_EXISTS') {
+        return res.status(400).json({
+          message: result.message,
+          code: 'ADMIN_EXISTS'
+        });
+      }
+
+      if (!result.user) {
+        return res.status(400).json({
+          message: 'Registration failed',
+        });
+      }
+      
       res.status(201).json({
         message: 'Registration successful. Please verify your email.',
         user: {
@@ -29,6 +44,7 @@ export class AuthController {
           firstName: result.user.firstName,
           lastName: result.user.lastName,
           middleName: result.user.middleName,
+          workspaces: result.user.workspaces,
         },
       });
     } catch (error: any) {
@@ -43,31 +59,22 @@ export class AuthController {
       const data: VerifyEmailDto = req.validatedBody;
       const result = await authService.verifyEmail(data);
       
-      res.cookie('accessToken', result.accessToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-      });
+      req.login(result.user, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Session creation failed' });
+        }
 
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-
-      res.json({
-        message: 'Email verified successfully',
-        user: {
-          id: result.user.id,
-          email: result.user.email,
-          firstName: result.user.firstName,
-          lastName: result.user.lastName,
-          middleName: result.user.middleName,
-          emailVerified: result.user.emailVerified,
-        },
-        accessToken: result.accessToken,
+        res.json({
+          message: 'Email verified successfully',
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            firstName: result.user.firstName,
+            lastName: result.user.lastName,
+            middleName: result.user.middleName,
+            emailVerified: result.user.emailVerified,
+          },
+        });
       });
     } catch (error: any) {
       res.status(400).json({
@@ -86,34 +93,24 @@ export class AuthController {
         return res.status(401).json({ message: info?.message || 'Authentication failed' });
       }
 
-      try {
-        const data = req.validatedBody as { email: string; password: string };
-        const result = await authService.login(data);
-        
-        res.cookie('accessToken', result.accessToken, {
-          httpOnly: true,
-          secure: IS_PRODUCTION,
-          sameSite: 'strict',
-          maxAge: 5 * 24 * 60 * 60 * 1000,
-        });
-
-        res.cookie('refreshToken', result.refreshToken, {
-          httpOnly: true,
-          secure: IS_PRODUCTION,
-          sameSite: 'strict',
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return res.status(500).json({ message: 'Session creation failed' });
+        }
 
         res.json({
-          message: result.message,
-          user: result.user,
-          accessToken: result.accessToken,
+          message: 'Login successful',
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            middleName: user.middleName,
+            emailVerified: user.emailVerified,
+            createdAt: user.createdAt
+          },
         });
-      } catch (error: any) {
-        return res.status(401).json({
-          message: error.message,
-        });
-      }
+      });
     })(req, res, next);
   }
 
@@ -149,33 +146,15 @@ export class AuthController {
 
   async refreshToken(req: ValidationRequest, res: Response, next: NextFunction) {
     try {
-      const refreshToken = req.cookies?.refreshToken || req.validatedBody?.refreshToken;
-      
-      if (!refreshToken) {
+      if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({
-          message: 'Refresh token required',
+          message: 'No active session',
         });
       }
 
-      const result = await authService.refreshToken(refreshToken);
-      
-      res.cookie('accessToken', result.accessToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 5 * 24 * 60 * 60 * 1000,
-      });
-
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
-
       res.json({
-        message: 'Token refreshed successfully',
-        accessToken: result.accessToken,
+        message: 'Session is active',
+        user: req.user,
       });
     } catch (error: any) {
       res.status(401).json({
@@ -186,11 +165,24 @@ export class AuthController {
 
   async logout(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
-      
-      res.json({
-        message: 'Logout successful',
+      req.logout((err) => {
+        if (err) {
+          return res.status(500).json({
+            message: 'Logout failed',
+          });
+        }
+        
+        req.session.destroy((sessionErr) => {
+          if (sessionErr) {
+            return res.status(500).json({
+              message: 'Session cleanup failed',
+            });
+          }
+          
+          res.json({
+            message: 'Logout successful',
+          });
+        });
       });
     } catch (error: any) {
       res.status(500).json({
@@ -210,6 +202,32 @@ export class AuthController {
       return res.json(result);
     } catch (error: any) {
       return res.status(400).json({
+        message: error.message,
+      });
+    }
+  }
+
+  async checkEmailAvailability(req: ValidationRequest, res: Response, next: NextFunction) {
+    try {
+      const data: CheckEmailDto = req.validatedBody;
+      const result = await authService.checkEmailAvailability(data);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message,
+      });
+    }
+  }
+
+  async checkWorkspaceAvailability(req: ValidationRequest, res: Response, next: NextFunction) {
+    try {
+      const data: CheckWorkspaceDto = req.validatedBody;
+      const result = await authService.checkWorkspaceAvailability(data);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({
         message: error.message,
       });
     }

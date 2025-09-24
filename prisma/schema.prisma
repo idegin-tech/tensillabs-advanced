@@ -1,5 +1,3 @@
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,30 +8,36 @@ datasource db {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
+  id            String      @id @default(cuid())
+  email         String      @unique
   emailVerified DateTime?
   firstName     String?
   lastName      String?
   middleName    String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdBy     String?
+  invitedBy     String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   workspaces    Workspace[]
   spaces        Space[]
   userSecret    UserSecret?
+  adminUsers    AdminUser[]
+  createdRoles  Role[]      @relation("RoleCreator")
+  createdSpaces Space[]     @relation("SpaceCreator")
+  createdPages  Page[]      @relation("PageCreator")
 
   @@map("users")
 }
 
 model UserSecret {
-  id                    String    @id @default(cuid())
-  userId                String    @unique
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hashedPassword        String?
-  emailVerificationOtp  String?
-  emailVerificationExp  DateTime?
-  passwordResetOtp      String?
-  passwordResetExp      DateTime?
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashedPassword       String?
+  emailVerificationOtp String?
+  emailVerificationExp DateTime?
+  passwordResetOtp     String?
+  passwordResetExp     DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -41,14 +45,16 @@ model UserSecret {
 }
 
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdBy String
-  creator   User     @relation(fields: [createdBy], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  spaces    Space[]
+  id         String      @id @default(cuid())
+  name       String
+  slug       String      @unique
+  createdBy  String
+  creator    User        @relation(fields: [createdBy], references: [id])
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  spaces     Space[]
+  adminUsers AdminUser[]
+  roles      Role[]
 
   @@map("workspaces")
 }
@@ -61,6 +67,8 @@ model Space {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   String
+  creator     User      @relation("SpaceCreator", fields: [createdBy], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   pages       Page[]
@@ -70,14 +78,46 @@ model Space {
 }
 
 model Page {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
   slug      String
   spaceId   String
-  space     Space   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdBy String
+  creator   User     @relation("PageCreator", fields: [createdBy], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([spaceId, slug])
   @@map("pages")
+}
+
+model AdminUser {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  permissions String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, workspaceId])
+  @@map("admin_users")
+}
+
+model Role {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  slug        String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   String
+  creator     User      @relation("RoleCreator", fields: [createdBy], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([workspaceId, slug])
+  @@map("roles")
 }
