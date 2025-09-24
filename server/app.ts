@@ -12,8 +12,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-  origin: env.NEXT_PUBLIC_CLIENT_URL,
-  credentials: true,
+    origin: env.NEXT_PUBLIC_URL,
+    credentials: true,
 }));
 app.use(morgan('combined'));
 app.use(express.json());
@@ -21,13 +21,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(session({
-  secret: env.AUTH_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000,
-  },
+    secret: env.AUTH_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000,
+    },
 }));
 
 app.use(passport.initialize());

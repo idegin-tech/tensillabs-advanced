@@ -33,7 +33,7 @@ export const authMiddleware = async (
     }
 
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.AUTH_SECRET) as { userId: string };
       
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
@@ -96,7 +96,7 @@ export const optionalAuthMiddleware = async (
     }
 
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.AUTH_SECRET) as { userId: string };
       
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },

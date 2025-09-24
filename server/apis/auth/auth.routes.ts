@@ -9,7 +9,8 @@ import {
   verifyEmailDto,
   forgotPasswordDto,
   resetPasswordDto,
-  refreshTokenDto
+  refreshTokenDto,
+  resendVerificationDto
 } from './auth.dto';
 
 const router = Router();
@@ -22,11 +23,12 @@ router.post('/forgot-password', validateBody(forgotPasswordDto), authController.
 router.post('/reset-password', validateBody(resetPasswordDto), authController.resetPassword);
 router.post('/refresh-token', validateBody(refreshTokenDto), authController.refreshToken);
 router.post('/logout', authMiddleware, authController.logout);
+router.post('/resend-verification', validateBody(resendVerificationDto), authController.resendVerification);
 
 router.get('/google', authController.googleAuth);
 router.get('/google/callback', 
   passport.authenticate('google', { 
-    failureRedirect: `${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/login?error=google_failed` 
+    failureRedirect: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/auth/login?error=google_failed` 
   }),
   authController.googleCallback
 );
@@ -34,7 +36,7 @@ router.get('/google/callback',
 router.get('/microsoft', authController.microsoftAuth);
 router.get('/microsoft/callback',
   passport.authenticate('microsoft', { 
-    failureRedirect: `${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/login?error=microsoft_failed` 
+    failureRedirect: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/auth/login?error=microsoft_failed` 
   }),
   authController.microsoftCallback
 );

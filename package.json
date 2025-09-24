@@ -12,7 +12,10 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed": "tsx server/seed/index.ts",
+    "db:seed:dev": "cross-env NODE_ENV=development tsx server/seed/index.ts",
+    "dev:setup": "npm run db:generate && npm run db:push && npm run db:seed:dev"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -94,6 +97,7 @@
     "@types/passport-microsoft": "^2.1.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.0.0",
     "prisma": "^6.16.2",
     "tailwindcss": "^4",
     "tsup": "^8.5.0",

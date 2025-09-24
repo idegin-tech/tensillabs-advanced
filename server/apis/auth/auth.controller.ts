@@ -3,6 +3,7 @@ import passport from 'passport';
 import { AuthService } from './auth.service';
 import { ValidationRequest } from '../../middleware/validation.middleware';
 import { AuthenticatedRequest } from './auth.middleware';
+import { AuthProvider } from '@prisma/client';
 import type { 
   RegisterDto, 
   LoginDto, 
@@ -11,6 +12,7 @@ import type {
   ResetPasswordDto,
   RefreshTokenDto
 } from './auth.dto';
+import { IS_PRODUCTION } from '@/server/server-constants';
 
 const authService = new AuthService();
 
@@ -43,14 +45,14 @@ export class AuthController {
       
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
@@ -74,7 +76,7 @@ export class AuthController {
   }
 
   async login(req: ValidationRequest, res: Response, next: NextFunction) {
-    passport.authenticate('local', (err: any, user: any, info: any) => {
+    passport.authenticate('local', async (err: any, user: any, info: any) => {
       if (err) {
         return res.status(500).json({ message: 'Internal server error' });
       }
@@ -83,37 +85,34 @@ export class AuthController {
         return res.status(401).json({ message: info?.message || 'Authentication failed' });
       }
 
-      authService.handleSocialLogin(user)
-        .then((result) => {
-          res.cookie('accessToken', result.accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 5 * 24 * 60 * 60 * 1000,
-          });
-
-          res.cookie('refreshToken', result.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-          });
-
-          res.json({
-            message: 'Login successful',
-            user: {
-              id: result.user.id,
-              email: result.user.email,
-              name: result.user.name,
-              authProvider: result.user.authProvider,
-              emailVerified: result.user.emailVerified,
-            },
-            accessToken: result.accessToken,
-          });
-        })
-        .catch((error) => {
-          res.status(500).json({ message: 'Login processing failed' });
+      try {
+        const data = req.validatedBody as { email: string; password: string };
+        const result = await authService.login(data);
+        
+        res.cookie('accessToken', result.accessToken, {
+          httpOnly: true,
+          secure: IS_PRODUCTION,
+          sameSite: 'strict',
+          maxAge: 5 * 24 * 60 * 60 * 1000,
         });
+
+        res.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: IS_PRODUCTION,
+          sameSite: 'strict',
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+        });
+
+        res.json({
+          message: result.message,
+          user: result.user,
+          accessToken: result.accessToken,
+        });
+      } catch (error: any) {
+        return res.status(401).json({
+          message: error.message,
+        });
+      }
     })(req, res, next);
   }
 
@@ -161,14 +160,14 @@ export class AuthController {
       
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
@@ -205,25 +204,25 @@ export class AuthController {
 
   async googleCallback(req: any, res: Response, next: NextFunction) {
     try {
-      const result = await authService.handleSocialLogin(req.user);
+      const result = await authService.handleSocialLogin(req.user, AuthProvider.GOOGLE);
       
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      res.redirect(`${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/callback?success=true`);
+      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?success=true`);
     } catch (error) {
-      res.redirect(`${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/callback?error=auth_failed`);
+      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?error=auth_failed`);
     }
   }
 
@@ -233,25 +232,39 @@ export class AuthController {
 
   async microsoftCallback(req: any, res: Response, next: NextFunction) {
     try {
-      const result = await authService.handleSocialLogin(req.user);
+      const result = await authService.handleSocialLogin(req.user, AuthProvider.MICROSOFT);
       
       res.cookie('accessToken', result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: IS_PRODUCTION,
         sameSite: 'strict',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      res.redirect(`${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/callback?success=true`);
+      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?success=true`);
     } catch (error) {
-      res.redirect(`${process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000'}/auth/callback?error=auth_failed`);
+      res.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/callback?error=auth_failed`);
+    }
+  }
+
+  async resendVerification(req: ValidationRequest, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.validatedBody;
+      
+      const result = await authService.resendVerificationCode(email);
+      
+      return res.json(result);
+    } catch (error: any) {
+      return res.status(400).json({
+        message: error.message,
+      });
     }
   }
 }

@@ -9,10 +9,8 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
-  JWT_SECRET: z.string(),
-  JWT_REFRESH_SECRET: z.string(),
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:8080'),
-  NEXT_PUBLIC_CLIENT_URL: z.string().default('http://localhost:3000'),
+  NEXT_PUBLIC_URL: z.string().default('http://localhost:3000'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -19,11 +15,6 @@ enum AuthProvider {
   EMAIL
 }
 
-enum SecretType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
-}
-
 model User {
   id            String       @id @default(cuid())
   email         String       @unique
@@ -35,21 +26,23 @@ model User {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   workspaces    Workspace[]
-  userSecrets   UserSecret[]
+  userSecret    UserSecret?
 
   @@map("users")
 }
 
 model UserSecret {
-  id        String     @id @default(cuid())
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      SecretType
-  secret    String
-  expiresAt DateTime
-  createdAt DateTime   @default(now())
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashedPassword        String?
+  emailVerificationOtp  String?
+  emailVerificationExp  DateTime?
+  passwordResetOtp      String?
+  passwordResetExp      DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  @@unique([userId, type])
   @@map("user_secrets")
 }
 

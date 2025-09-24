@@ -31,20 +31,16 @@ passport.use(
           return done(null, false, { message: 'Please verify your email first' });
         }
 
-        const userSecret = await prisma.userSecret.findUnique({
-          where: {
-            userId_type: {
-              userId: user.id,
-              type: 'EMAIL_VERIFICATION',
-            },
-          },
+        const userWithSecret = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: { userSecret: true }
         });
 
-        if (!userSecret) {
+        if (!userWithSecret?.userSecret?.hashedPassword) {
           return done(null, false, { message: 'Account not properly configured' });
         }
 
-        const isValidPassword = await comparePassword(password, userSecret.secret);
+        const isValidPassword = await comparePassword(password, userWithSecret.userSecret.hashedPassword);
 
         if (!isValidPassword) {
           return done(null, false, { message: 'Invalid email or password' });
