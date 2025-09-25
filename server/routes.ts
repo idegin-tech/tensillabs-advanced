@@ -3,25 +3,17 @@ import { authRoutes } from './apis/auth/auth.routes';
 import { workspacesRoutes } from './apis/workspaces/workspaces.routes';
 import { usersRoutes } from './apis/users/users.routes';
 import { spacesRoutes } from './apis/spaces/spaces.routes';
+import { ResponseHelper } from './helpers/response.helper';
 
 const router = Router();
 const apiRouter = Router();
 
 router.get('/', (req, res) => {
-    res.json({
-        message: 'Welcome to Tensil API',
-        status: 'success',
-        timestamp: new Date().toISOString()
-    });
+    ResponseHelper.success(res, 'Welcome to Tensil API');
 });
 
 apiRouter.get('/', (req, res) => {
-    res.json({
-        message: 'API v1 endpoint',
-        status: 'success',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0'
-    });
+    ResponseHelper.success(res, 'API v1 endpoint', { version: '1.0.0' });
 });
 
 apiRouter.use('/auth', authRoutes);

@@ -3,6 +3,7 @@ import passport from 'passport';
 import { AuthService } from './auth.service';
 import { ValidationRequest } from '../../middleware/validation.middleware';
 import { AuthenticatedRequest } from './auth.middleware';
+import { ResponseHelper } from '../../helpers/response.helper';
 import type { 
   RegisterDto, 
   LoginDto, 
@@ -24,20 +25,14 @@ export class AuthController {
       const result = await authService.register(data);
       
       if (result.status === 'ADMIN_EXISTS') {
-        return res.status(400).json({
-          message: result.message,
-          code: 'ADMIN_EXISTS'
-        });
+        return ResponseHelper.conflict(res, result.message, 'ADMIN_EXISTS');
       }
 
       if (!result.user) {
-        return res.status(400).json({
-          message: 'Registration failed',
-        });
+        return ResponseHelper.badRequest(res, 'Registration failed');
       }
       
-      res.status(201).json({
-        message: 'Registration successful. Please verify your email.',
+      return ResponseHelper.created(res, 'Registration successful. Please verify your email.', {
         user: {
           id: result.user.id,
           email: result.user.email,
@@ -48,9 +43,7 @@ export class AuthController {
         },
       });
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
@@ -61,11 +54,10 @@ export class AuthController {
       
       req.login(result.user, (err) => {
         if (err) {
-          return res.status(500).json({ message: 'Session creation failed' });
+          return ResponseHelper.internalError(res, 'Session creation failed');
         }
 
-        res.json({
-          message: 'Email verified successfully',
+        return ResponseHelper.success(res, 'Email verified successfully', {
           user: {
             id: result.user.id,
             email: result.user.email,
@@ -77,29 +69,26 @@ export class AuthController {
         });
       });
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
   async login(req: ValidationRequest, res: Response, next: NextFunction) {
     passport.authenticate('local', async (err: any, user: any, info: any) => {
       if (err) {
-        return res.status(500).json({ message: 'Internal server error' });
+        return ResponseHelper.internalError(res, 'Internal server error');
       }
       
       if (!user) {
-        return res.status(401).json({ message: info?.message || 'Authentication failed' });
+        return ResponseHelper.unauthorized(res, info?.message || 'Authentication failed');
       }
 
       req.login(user, (loginErr) => {
         if (loginErr) {
-          return res.status(500).json({ message: 'Session creation failed' });
+          return ResponseHelper.internalError(res, 'Session creation failed');
         }
 
-        res.json({
-          message: 'Login successful',
+        return ResponseHelper.success(res, 'Login successful', {
           user: {
             id: user.id,
             email: user.email,
@@ -119,13 +108,9 @@ export class AuthController {
       const data: ForgotPasswordDto = req.validatedBody;
       await authService.forgotPassword(data);
       
-      res.json({
-        message: 'If this email exists, we will send a password reset link.',
-      });
+      return ResponseHelper.success(res, 'If this email exists, we will send a password reset link.');
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
@@ -134,32 +119,21 @@ export class AuthController {
       const data: ResetPasswordDto = req.validatedBody;
       await authService.resetPassword(data);
       
-      res.json({
-        message: 'Password reset successfully. You can now login with your new password.',
-      });
+      return ResponseHelper.success(res, 'Password reset successfully. You can now login with your new password.');
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
   async refreshToken(req: ValidationRequest, res: Response, next: NextFunction) {
     try {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
-        return res.status(401).json({
-          message: 'No active session',
-        });
+        return ResponseHelper.unauthorized(res, 'No active session');
       }
 
-      res.json({
-        message: 'Session is active',
-        user: req.user,
-      });
+      return ResponseHelper.success(res, 'Session is active', { user: req.user });
     } catch (error: any) {
-      res.status(401).json({
-        message: error.message,
-      });
+      return ResponseHelper.unauthorized(res, error.message);
     }
   }
 
@@ -167,27 +141,19 @@ export class AuthController {
     try {
       req.logout((err) => {
         if (err) {
-          return res.status(500).json({
-            message: 'Logout failed',
-          });
+          return ResponseHelper.internalError(res, 'Logout failed');
         }
         
         req.session.destroy((sessionErr) => {
           if (sessionErr) {
-            return res.status(500).json({
-              message: 'Session cleanup failed',
-            });
+            return ResponseHelper.internalError(res, 'Session cleanup failed');
           }
           
-          res.json({
-            message: 'Logout successful',
-          });
+          return ResponseHelper.success(res, 'Logout successful');
         });
       });
     } catch (error: any) {
-      res.status(500).json({
-        message: 'Logout failed',
-      });
+      return ResponseHelper.internalError(res, 'Logout failed');
     }
   }
 
@@ -199,11 +165,9 @@ export class AuthController {
       
       const result = await authService.resendVerificationCode(email);
       
-      return res.json(result);
+      return ResponseHelper.success(res, result.message || 'Verification code resent successfully');
     } catch (error: any) {
-      return res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
@@ -212,11 +176,9 @@ export class AuthController {
       const data: CheckEmailDto = req.validatedBody;
       const result = await authService.checkEmailAvailability(data);
       
-      res.json(result);
+      return ResponseHelper.success(res, 'Email availability checked', result);
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 
@@ -225,11 +187,9 @@ export class AuthController {
       const data: CheckWorkspaceDto = req.validatedBody;
       const result = await authService.checkWorkspaceAvailability(data);
       
-      res.json(result);
+      return ResponseHelper.success(res, 'Workspace availability checked', result);
     } catch (error: any) {
-      res.status(400).json({
-        message: error.message,
-      });
+      return ResponseHelper.badRequest(res, error.message);
     }
   }
 }

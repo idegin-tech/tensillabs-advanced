@@ -7,4 +7,6 @@ const usersController = new UsersController();
 
 router.use(authMiddleware);
 
+router.get('/profile', usersController.getProfile);
+
 export { router as usersRoutes };
